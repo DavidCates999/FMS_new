@@ -11,20 +11,20 @@ def fetch_customers_suspended():
         "Content-Type": "application/json",
         "Origin": "https://fsm.s4servicesync.com",
         "Referer": "https://fsm.s4servicesync.com/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
-        "x-tenant": "Boston Train-TAX"
+        "x-tenant": "Charlotte"
     }
     
     cookies = {
-        "AUTH-TOKEN": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzZXJ2aWNlc3luYyIsInN1YiI6ImZvcnVzZTE5ODFAZ21haWwuY29tIiwiaWF0IjoxNzY0OTU0NDE4LCJleHAiOjE3NjQ5NTgwMTh9.h0Yh3IcTRsMHqvii50wI8eBU4SrZ4x60I_8qE6k3MYY4v6rqDj6BsSKIyrYdAjQOeyVU-ECxDtZ4hDGLfrNfig"
+        "AUTH-TOKEN": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzZXJ2aWNlc3luYyIsInN1YiI6ImZvcnVzZTE5ODFAZ21haWwuY29tIiwiaWF0IjoxNzY5NTM5MDMwLCJleHAiOjE3Njk1NDI2MzB9.pygw8BGQLWXRAJVttYqYjnl6_s8vTd0z8rdMUfEvj26wkVEzI5I0ki0QlDaKtzXx1TG631ALmDz0EupQqLUirQ"
     }
     
     payload = {
         "skip": 0,
-        "take": 20
+        "take": 50
     }
     
     try:
@@ -73,4 +73,3 @@ def fetch_customers_suspended():
 
 if __name__ == "__main__":
     fetch_customers_suspended()
-

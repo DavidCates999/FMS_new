@@ -15,7 +15,51 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "FMS")
 
-# Available Collections (populated from your data)
+# =============================================================================
+# MULTI-DATABASE ARCHITECTURE
+# =============================================================================
+# The system supports multiple databases based on franchise location:
+#
+# Database: FMS
+#   - Location: Boston Train-TAX
+#
+# Database: Austin
+#   - Location: Austin
+#
+# Database: Boston (shared)
+#   - Locations: Boston, Cleveland, Chicago, Columbia, Georgia, 
+#                Maryland, Northern VA, Richmond
+#
+# Database: Broward
+#   - Location: Broward
+#
+# Database: CentralAL
+#   - Location: Central AL
+#
+# Database: CentralFlorida
+#   - Location: Central Florida
+#
+# Database: Charleston
+#   - Location: Charleston
+#
+# Database: Charlotte
+#   - Location: Charlotte
+#
+# =============================================================================
+
+# All available databases
+AVAILABLE_DATABASES = [
+    "FMS",
+    "Austin",
+    "Boston",
+    "Broward",
+    "CentralAL",
+    "CentralFlorida",
+    "Charleston",
+    "Charlotte"
+]
+
+# Available Collections (common across databases)
 COLLECTIONS = [
     "leads",
     "proposals", 

@@ -1,10 +1,10 @@
 import json
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timezone
 
 def upload_leads_to_mongodb():
     # MongoDB connection settings
-    MONGO_URI = "mongodb://localhost:27017/"  # Update with your MongoDB URI
+    MONGO_URI = "mongodb+srv://Anthony:yVXMtGOZKbRqSDNN@cluster0.rdt20jh.mongodb.net/"  # Update with your MongoDB URI
     DATABASE_NAME = "FMS"  # Update with your database name
     COLLECTION_NAME = "proposals"
     
@@ -23,7 +23,7 @@ def upload_leads_to_mongodb():
     
     # Read JSON file
     try:
-        with open("proposals_response.json", "r", encoding="utf-8") as f:
+        with open("proposals_response.json", "r", encoding="utf-8") as f:  # Changed from servicecontracts_response.json to servicecontracts_response.json
             data = json.load(f)
         print(f"✅ Loaded JSON file successfully!")
     except Exception as e:
@@ -70,7 +70,7 @@ def upload_leads_to_mongodb():
     
     # Add metadata to each document
     for record in records:
-        record["_importedAt"] = datetime.utcnow()
+        record["_importedAt"] = datetime.now(timezone.utc)
         record["_source"] = "api_import"
     
     # Insert documents

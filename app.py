@@ -18,31 +18,71 @@ import config
 # 1. SUPER SYSTEM4 ADMIN (Top Level Corporate - CEO, CTO, etc.)
 #    - Highest level access with full control over everything
 #    - Has System4 Admin permissions + additional privileges
-#    - Can manage all 65+ franchises, users, and system settings
+#    - Can query ALL databases across all franchises
 #
 # 2. SYSTEM4 ADMIN (Corporate Staff)
 #    - Company headquarters staff
-#    - Can view/analyze data across ALL franchises
+#    - Can query ALL databases across all franchises
 #    - Example: Corporate managers, analysts, support staff
 #
 # 3. FRANCHISE PARTNER (Franchise Owners)
 #    - Actual franchise owners who own/operate location(s)
-#    - Can see ALL data for their specific franchise location(s)
-#    - Full access within their franchise scope
+#    - Can ONLY query their specific franchise database
+#    - Full access within their franchise database scope
 #
 # 4. CLIENT ADMIN (Franchise Employees)
 #    - Employees working at a franchise location
-#    - Limited access - currently set to Franchise Partner security level
-#    - Can view franchise data but with restricted permissions
+#    - Can ONLY query their specific franchise database
+#    - Limited access within their franchise database scope
 #
 # =============================================================================
 
 # =============================================================================
-# FRANCHISE TO STATE MAPPING
+# LOCATION TO DATABASE MAPPING (Multi-Database Architecture)
+# =============================================================================
+# Maps franchise location names to their corresponding MongoDB database names
+# 
+# Database Distribution:
+# - Austin -> Austin database
+# - Broward -> Broward database
+# - Central AL -> CentralAL database
+# - Central Florida -> CentralFlorida database
+# - Charleston -> Charleston database
+# - Charlotte -> Charlotte database
+# - Boston Train-TAX -> FMS database
+# - Boston, Cleveland, Chicago, Columbia, Georgia, Maryland, 
+#   Northern VA, Richmond -> Boston database (shared)
+#
+LOCATION_DATABASE_MAPPING = {
+    # Locations with their own dedicated databases
+    "Austin": "Austin",
+    "Broward": "Broward",
+    "Central AL": "CentralAL",
+    "Central Florida": "CentralFlorida",
+    "Charleston": "Charleston",
+    "Charlotte": "Charlotte",
+    "Boston Train-TAX": "FMS",
+    
+    # Locations sharing the Boston database
+    "Boston": "Boston",
+    "Cleveland": "Boston",
+    "Chicago": "Boston",
+    "Columbia": "Boston",
+    "Georgia": "Boston",
+    "Maryland": "Boston",
+    "Northern VA": "Boston",
+    "Richmond": "Boston",
+}
+
+# List of all available databases (for admin queries across all databases)
+ALL_DATABASES = ["FMS", "Austin", "Boston", "Broward", "CentralAL", "CentralFlorida", "Charleston", "Charlotte"]
+
+# =============================================================================
+# FRANCHISE TO STATE MAPPING (Legacy - for state-based filtering within database)
 # =============================================================================
 # Maps franchise names to their corresponding state codes for data filtering
-# This ensures Franchise Partners and Client Admins only see their location data
 FRANCHISE_STATE_MAPPING = {
+    "Austin": ["TX"],           # Texas
     "Boston": ["MA"],           # Massachusetts
     "Cleveland": ["OH"],        # Ohio
     "Chicago": ["IL"],          # Illinois
@@ -52,7 +92,11 @@ FRANCHISE_STATE_MAPPING = {
     "Maryland": ["MD"],         # Maryland
     "Northern VA": ["VA"],      # Virginia
     "Richmond": ["VA"],         # Virginia
-    "Washington DC": ["DC"],    # District of Columbia
+    "Boston Train-TAX": ["MA"], # Massachusetts (Training/Tax)
+    "Broward": ["FL"],          # Florida
+    "Central AL": ["AL"],       # Alabama
+    "Central Florida": ["FL"],  # Florida
+    "Charlotte": ["NC"],        # North Carolina
 }
 
 # =============================================================================
@@ -87,7 +131,7 @@ COLLECTION_STATE_FIELDS = {
 TEST_USERS = {
     # =========================================================================
     # SUPER SYSTEM4 ADMIN - Top Level Corporate (CEO, CTO, etc.)
-    # Full control over everything
+    # Full control - Can query ALL databases
     # =========================================================================
     "ceo@system4.com": {
         "password": "ceo123",
@@ -108,7 +152,7 @@ TEST_USERS = {
     
     # =========================================================================
     # SYSTEM4 ADMIN - Corporate Staff
-    # Can see data across ALL 65+ franchises
+    # Can query ALL databases across all franchises
     # =========================================================================
     "manager@system4.com": {
         "password": "manager123",
@@ -136,9 +180,19 @@ TEST_USERS = {
     },
     
     # =========================================================================
-    # FRANCHISE PARTNER - Franchise Owners
-    # Can see ALL data for their franchise location(s)
+    # FRANCHISE PARTNER - Franchise Owners (16 Locations)
+    # Can ONLY query their specific franchise database
     # =========================================================================
+    # Location 1: Austin (Database: Austin)
+    "owner.austin@franchise.com": {
+        "password": "austin123",
+        "name": "James Rodriguez",
+        "role": "Franchise Partner",
+        "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
+        "franchise": "Austin",
+        "avatar": "🤠"
+    },
+    # Location 2: Boston (Database: Boston)
     "owner.boston@franchise.com": {
         "password": "boston123",
         "name": "Michael O'Brien",
@@ -147,6 +201,7 @@ TEST_USERS = {
         "franchise": "Boston",
         "avatar": "🏢"
     },
+    # Location 3: Cleveland (Database: Boston)
     "owner.cleveland@franchise.com": {
         "password": "cleveland123",
         "name": "David Kowalski",
@@ -155,6 +210,7 @@ TEST_USERS = {
         "franchise": "Cleveland",
         "avatar": "🏛️"
     },
+    # Location 4: Chicago (Database: Boston)
     "owner.chicago@franchise.com": {
         "password": "chicago123",
         "name": "Rachel Thompson",
@@ -163,6 +219,7 @@ TEST_USERS = {
         "franchise": "Chicago",
         "avatar": "🌆"
     },
+    # Location 5: Charleston (Database: Charleston)
     "owner.charleston@franchise.com": {
         "password": "charleston123",
         "name": "William Parker",
@@ -171,6 +228,7 @@ TEST_USERS = {
         "franchise": "Charleston",
         "avatar": "🌴"
     },
+    # Location 6: Columbia (Database: Boston)
     "owner.columbia@franchise.com": {
         "password": "columbia123",
         "name": "Amanda Foster",
@@ -179,6 +237,7 @@ TEST_USERS = {
         "franchise": "Columbia",
         "avatar": "🏛️"
     },
+    # Location 7: Georgia (Database: Boston)
     "owner.georgia@franchise.com": {
         "password": "georgia123",
         "name": "James Wilson",
@@ -187,6 +246,7 @@ TEST_USERS = {
         "franchise": "Georgia",
         "avatar": "🍑"
     },
+    # Location 8: Maryland (Database: Boston)
     "owner.maryland@franchise.com": {
         "password": "maryland123",
         "name": "Patricia Brown",
@@ -195,6 +255,7 @@ TEST_USERS = {
         "franchise": "Maryland",
         "avatar": "🦀"
     },
+    # Location 9: Northern VA (Database: Boston)
     "owner.nova@franchise.com": {
         "password": "nova123",
         "name": "Christopher Davis",
@@ -203,6 +264,7 @@ TEST_USERS = {
         "franchise": "Northern VA",
         "avatar": "🏢"
     },
+    # Location 10: Richmond (Database: Boston)
     "owner.richmond@franchise.com": {
         "password": "richmond123",
         "name": "Elizabeth Turner",
@@ -211,19 +273,66 @@ TEST_USERS = {
         "franchise": "Richmond",
         "avatar": "🏰"
     },
-    "owner.dc@franchise.com": {
-        "password": "dc123",
-        "name": "Robert Harris",
+    # Location 11: Boston Train-TAX (Database: FMS)
+    "owner.bostontax@franchise.com": {
+        "password": "bostontax123",
+        "name": "Thomas Mitchell",
         "role": "Franchise Partner",
         "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
-        "franchise": "Washington DC",
-        "avatar": "🏛️"
+        "franchise": "Boston Train-TAX",
+        "avatar": "📋"
+    },
+    # Location 12: Broward (Database: Broward)
+    "owner.broward@franchise.com": {
+        "password": "broward123",
+        "name": "Maria Santos",
+        "role": "Franchise Partner",
+        "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
+        "franchise": "Broward",
+        "avatar": "🌴"
+    },
+    # Location 13: Central AL (Database: CentralAL)
+    "owner.centralal@franchise.com": {
+        "password": "centralal123",
+        "name": "Robert Jackson",
+        "role": "Franchise Partner",
+        "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
+        "franchise": "Central AL",
+        "avatar": "🏈"
+    },
+    # Location 14: Central Florida (Database: CentralFlorida)
+    "owner.centralfl@franchise.com": {
+        "password": "centralfl123",
+        "name": "Jennifer Lopez",
+        "role": "Franchise Partner",
+        "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
+        "franchise": "Central Florida",
+        "avatar": "🌞"
+    },
+    # Location 15: Charlotte (Database: Charlotte)
+    "owner.charlotte@franchise.com": {
+        "password": "charlotte123",
+        "name": "Steven Williams",
+        "role": "Franchise Partner",
+        "permissions": ["view_franchise", "manage_franchise", "franchise_reports", "manage_employees"],
+        "franchise": "Charlotte",
+        "avatar": "🐝"
     },
     
     # =========================================================================
-    # CLIENT ADMIN - Franchise Employees
-    # Limited access (currently using Franchise Partner security level)
+    # CLIENT ADMIN - Franchise Employees (16 Locations)
+    # Can ONLY query their specific franchise database
     # =========================================================================
+    # Location 1: Austin (Database: Austin)
+    "staff.austin@franchise.com": {
+        "password": "staffaustin123",
+        "name": "Carlos Garcia",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Austin",
+        "avatar": "👤"
+    },
+    # Location 2: Boston (Database: Boston)
     "staff.boston@franchise.com": {
         "password": "staff123",
         "name": "Lisa Martinez",
@@ -232,6 +341,7 @@ TEST_USERS = {
         "franchise": "Boston",
         "avatar": "👤"
     },
+    # Location 3: Cleveland (Database: Boston)
     "staff.cleveland@franchise.com": {
         "password": "staff456",
         "name": "Kevin Johnson",
@@ -240,6 +350,16 @@ TEST_USERS = {
         "franchise": "Cleveland",
         "avatar": "👨‍💼"
     },
+    # Location 4: Chicago (Database: Boston)
+    "staff.chicago@franchise.com": {
+        "password": "staffchicago123",
+        "name": "Michelle Davis",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Chicago",
+        "avatar": "👩‍💼"
+    },
+    # Location 5: Charleston (Database: Charleston)
     "staff.charleston@franchise.com": {
         "password": "staff789",
         "name": "Maria Rodriguez",
@@ -248,6 +368,7 @@ TEST_USERS = {
         "franchise": "Charleston",
         "avatar": "👩‍💼"
     },
+    # Location 6: Columbia (Database: Boston)
     "staff.columbia@franchise.com": {
         "password": "staff101",
         "name": "Daniel Lee",
@@ -256,6 +377,7 @@ TEST_USERS = {
         "franchise": "Columbia",
         "avatar": "👤"
     },
+    # Location 7: Georgia (Database: Boston)
     "staff.georgia@franchise.com": {
         "password": "staff102",
         "name": "Ashley Clark",
@@ -264,6 +386,7 @@ TEST_USERS = {
         "franchise": "Georgia",
         "avatar": "👩"
     },
+    # Location 8: Maryland (Database: Boston)
     "staff.maryland@franchise.com": {
         "password": "staff103",
         "name": "Ryan Moore",
@@ -272,6 +395,7 @@ TEST_USERS = {
         "franchise": "Maryland",
         "avatar": "👨"
     },
+    # Location 9: Northern VA (Database: Boston)
     "staff.nova@franchise.com": {
         "password": "staff104",
         "name": "Jessica White",
@@ -280,6 +404,7 @@ TEST_USERS = {
         "franchise": "Northern VA",
         "avatar": "👩‍💻"
     },
+    # Location 10: Richmond (Database: Boston)
     "staff.richmond@franchise.com": {
         "password": "staff105",
         "name": "Brandon Taylor",
@@ -288,13 +413,50 @@ TEST_USERS = {
         "franchise": "Richmond",
         "avatar": "👨‍💻"
     },
-    "staff.dc@franchise.com": {
-        "password": "staff106",
-        "name": "Nicole Adams",
+    # Location 11: Boston Train-TAX (Database: FMS)
+    "staff.bostontax@franchise.com": {
+        "password": "staffbostontax123",
+        "name": "Sarah Thompson",
         "role": "Client Admin",
         "permissions": ["view_franchise", "basic_reports"],
-        "franchise": "Washington DC",
+        "franchise": "Boston Train-TAX",
         "avatar": "👩‍🏫"
+    },
+    # Location 12: Broward (Database: Broward)
+    "staff.broward@franchise.com": {
+        "password": "staffbroward123",
+        "name": "Miguel Fernandez",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Broward",
+        "avatar": "👨‍💻"
+    },
+    # Location 13: Central AL (Database: CentralAL)
+    "staff.centralal@franchise.com": {
+        "password": "staffcentralal123",
+        "name": "Emily Johnson",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Central AL",
+        "avatar": "👩"
+    },
+    # Location 14: Central Florida (Database: CentralFlorida)
+    "staff.centralfl@franchise.com": {
+        "password": "staffcentralfl123",
+        "name": "David Martinez",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Central Florida",
+        "avatar": "👨"
+    },
+    # Location 15: Charlotte (Database: Charlotte)
+    "staff.charlotte@franchise.com": {
+        "password": "staffcharlotte123",
+        "name": "Amanda Wilson",
+        "role": "Client Admin",
+        "permissions": ["view_franchise", "basic_reports"],
+        "franchise": "Charlotte",
+        "avatar": "👩‍💼"
     }
 }
 
@@ -305,8 +467,53 @@ def authenticate_user(email, password):
         user_data = TEST_USERS[email].copy()
         user_data["email"] = email
         del user_data["password"]  # Don't store password in session
+        
+        # Add the database name based on franchise location
+        franchise = user_data.get("franchise", "")
+        if franchise in LOCATION_DATABASE_MAPPING:
+            user_data["database"] = LOCATION_DATABASE_MAPPING[franchise]
+        elif franchise == "All Franchises":
+            user_data["database"] = "ALL"  # Special marker for admin users
+        else:
+            user_data["database"] = "FMS"  # Default fallback
+        
         return user_data
     return None
+
+
+def get_user_database():
+    """
+    Get the database name for the current logged-in user.
+    
+    Returns:
+        - Single database name (string) for Franchise Partner/Client Admin
+        - "ALL" for Super System4 Admin/System4 Admin (query all databases)
+        - "FMS" as default fallback
+    """
+    if 'user' not in st.session_state or st.session_state.user is None:
+        return "FMS"  # Default
+    
+    user = st.session_state.user
+    role = user.get("role", "")
+    
+    # Super System4 Admin and System4 Admin can query ALL databases
+    if role in ["Super System4 Admin", "System4 Admin"]:
+        return "ALL"
+    
+    # Franchise Partner and Client Admin can only query their specific database
+    return user.get("database", "FMS")
+
+
+def can_query_all_databases():
+    """
+    Check if the current user can query all databases.
+    Returns True for Super System4 Admin and System4 Admin.
+    """
+    if 'user' not in st.session_state or st.session_state.user is None:
+        return False
+    
+    role = st.session_state.user.get("role", "")
+    return role in ["Super System4 Admin", "System4 Admin"]
 
 
 def get_user_franchise_filter():
@@ -314,9 +521,11 @@ def get_user_franchise_filter():
     Get the franchise filter for the current logged-in user.
     Returns None if user can see all data, or a list of state codes to filter by.
     
-    Currently disabled - all users can see all data regardless of role.
+    Note: With multi-database architecture, state filtering is less critical
+    as users are already limited to their franchise's database.
     """
-    # Filtering disabled - all roles see all data
+    # With multi-database architecture, filtering is done at database level
+    # State filtering within database is optional/disabled
     return None
 
 
@@ -722,6 +931,9 @@ def show_login_page():
                 if st.button("🚀 Sign In Now", key="quick_login_btn", use_container_width=True, type="primary"):
                     user_data = authenticate_user(selected_email, selected_user['password'])
                     if user_data:
+                        # Clear cached database stats to ensure fresh data for new user
+                        get_database_stats.clear()
+                        get_all_databases_stats.clear()
                         st.session_state.logged_in = True
                         st.session_state.user = user_data
                         st.rerun()
@@ -767,6 +979,9 @@ def show_login_page():
                     if email and password:
                         user_data = authenticate_user(email, password)
                         if user_data:
+                            # Clear cached database stats to ensure fresh data for new user
+                            get_database_stats.clear()
+                            get_all_databases_stats.clear()
                             st.session_state.logged_in = True
                             st.session_state.user = user_data
                             st.rerun()
@@ -775,7 +990,7 @@ def show_login_page():
                     else:
                         st.warning("⚠️ Please enter both email and password.")
             
-            # Credentials reference - All Test Accounts
+            # Credentials reference - All Test Accounts (16 Locations)
             with st.expander("📋 View All Test Account Credentials", expanded=False):
                 st.markdown("""
                 <div class="cred-section">
@@ -783,7 +998,7 @@ def show_login_page():
                         <div class="cred-section-icon" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">👑</div>
                         <div>
                             <p class="cred-section-title">Super System4 Admin</p>
-                            <p class="cred-section-desc">Full system access • All franchises • Complete control</p>
+                            <p class="cred-section-desc">Full system access • ALL Databases • Complete control</p>
                         </div>
                     </div>
                     <div class="cred-item"><span class="cred-email">ceo@system4.com</span><span class="cred-password">ceo123</span></div>
@@ -795,7 +1010,7 @@ def show_login_page():
                         <div class="cred-section-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">🔧</div>
                         <div>
                             <p class="cred-section-title">System4 Admin</p>
-                            <p class="cred-section-desc">Corporate staff • View all franchises • Reports & analytics</p>
+                            <p class="cred-section-desc">Corporate staff • ALL Databases • Reports & analytics</p>
                         </div>
                     </div>
                     <div class="cred-item"><span class="cred-email">manager@system4.com</span><span class="cred-password">manager123</span></div>
@@ -807,39 +1022,66 @@ def show_login_page():
                     <div class="cred-section-header">
                         <div class="cred-section-icon" style="background: linear-gradient(135deg, #10b981, #059669);">🏢</div>
                         <div>
-                            <p class="cred-section-title">Franchise Partner</p>
-                            <p class="cred-section-desc">Franchise owners • Full franchise access • Manage employees</p>
+                            <p class="cred-section-title">Franchise Partner (15 Locations)</p>
+                            <p class="cred-section-desc">Franchise owners • Single database access per location</p>
                         </div>
                     </div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Austin</p>
+                    <div class="cred-item"><span class="cred-email">owner.austin@franchise.com</span><span class="cred-password">austin123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Boston (shared)</p>
                     <div class="cred-item"><span class="cred-email">owner.boston@franchise.com</span><span class="cred-password">boston123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.cleveland@franchise.com</span><span class="cred-password">cleveland123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.chicago@franchise.com</span><span class="cred-password">chicago123</span></div>
-                    <div class="cred-item"><span class="cred-email">owner.charleston@franchise.com</span><span class="cred-password">charleston123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.columbia@franchise.com</span><span class="cred-password">columbia123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.georgia@franchise.com</span><span class="cred-password">georgia123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.maryland@franchise.com</span><span class="cred-password">maryland123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.nova@franchise.com</span><span class="cred-password">nova123</span></div>
                     <div class="cred-item"><span class="cred-email">owner.richmond@franchise.com</span><span class="cred-password">richmond123</span></div>
-                    <div class="cred-item"><span class="cred-email">owner.dc@franchise.com</span><span class="cred-password">dc123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: FMS</p>
+                    <div class="cred-item"><span class="cred-email">owner.bostontax@franchise.com</span><span class="cred-password">bostontax123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Broward</p>
+                    <div class="cred-item"><span class="cred-email">owner.broward@franchise.com</span><span class="cred-password">broward123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: CentralAL</p>
+                    <div class="cred-item"><span class="cred-email">owner.centralal@franchise.com</span><span class="cred-password">centralal123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: CentralFlorida</p>
+                    <div class="cred-item"><span class="cred-email">owner.centralfl@franchise.com</span><span class="cred-password">centralfl123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Charleston</p>
+                    <div class="cred-item"><span class="cred-email">owner.charleston@franchise.com</span><span class="cred-password">charleston123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Charlotte</p>
+                    <div class="cred-item"><span class="cred-email">owner.charlotte@franchise.com</span><span class="cred-password">charlotte123</span></div>
                 </div>
                 
                 <div class="cred-section">
                     <div class="cred-section-header">
                         <div class="cred-section-icon" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);">👤</div>
                         <div>
-                            <p class="cred-section-title">Client Admin</p>
-                            <p class="cred-section-desc">Franchise employees • Limited access • Basic reports</p>
+                            <p class="cred-section-title">Client Admin (15 Locations)</p>
+                            <p class="cred-section-desc">Franchise employees • Single database access per location</p>
                         </div>
                     </div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Austin</p>
+                    <div class="cred-item"><span class="cred-email">staff.austin@franchise.com</span><span class="cred-password">staffaustin123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Boston (shared)</p>
                     <div class="cred-item"><span class="cred-email">staff.boston@franchise.com</span><span class="cred-password">staff123</span></div>
                     <div class="cred-item"><span class="cred-email">staff.cleveland@franchise.com</span><span class="cred-password">staff456</span></div>
-                    <div class="cred-item"><span class="cred-email">staff.charleston@franchise.com</span><span class="cred-password">staff789</span></div>
+                    <div class="cred-item"><span class="cred-email">staff.chicago@franchise.com</span><span class="cred-password">staffchicago123</span></div>
                     <div class="cred-item"><span class="cred-email">staff.columbia@franchise.com</span><span class="cred-password">staff101</span></div>
                     <div class="cred-item"><span class="cred-email">staff.georgia@franchise.com</span><span class="cred-password">staff102</span></div>
                     <div class="cred-item"><span class="cred-email">staff.maryland@franchise.com</span><span class="cred-password">staff103</span></div>
                     <div class="cred-item"><span class="cred-email">staff.nova@franchise.com</span><span class="cred-password">staff104</span></div>
                     <div class="cred-item"><span class="cred-email">staff.richmond@franchise.com</span><span class="cred-password">staff105</span></div>
-                    <div class="cred-item"><span class="cred-email">staff.dc@franchise.com</span><span class="cred-password">staff106</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: FMS</p>
+                    <div class="cred-item"><span class="cred-email">staff.bostontax@franchise.com</span><span class="cred-password">staffbostontax123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Broward</p>
+                    <div class="cred-item"><span class="cred-email">staff.broward@franchise.com</span><span class="cred-password">staffbroward123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: CentralAL</p>
+                    <div class="cred-item"><span class="cred-email">staff.centralal@franchise.com</span><span class="cred-password">staffcentralal123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: CentralFlorida</p>
+                    <div class="cred-item"><span class="cred-email">staff.centralfl@franchise.com</span><span class="cred-password">staffcentralfl123</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Charleston</p>
+                    <div class="cred-item"><span class="cred-email">staff.charleston@franchise.com</span><span class="cred-password">staff789</span></div>
+                    <p style="color: #94a3b8; font-size: 0.7rem; margin: 0.5rem 0;">📁 Database: Charlotte</p>
+                    <div class="cred-item"><span class="cred-email">staff.charlotte@franchise.com</span><span class="cred-password">staffcharlotte123</span></div>
                 </div>
                 """, unsafe_allow_html=True)
     
@@ -1455,25 +1697,102 @@ def get_collection_schema(db, collection_name):
 
 
 # Get all collections and their schemas
-def get_database_schema(db):
+def get_database_schema(db, mongo_client=None):
+    """
+    Get database schema for query generation.
+    
+    For admin users (Super System4 Admin, System4 Admin):
+        - Gets schema from ALL 8 databases
+        - Combines unique collection schemas
+    
+    For franchise users:
+        - Gets schema from their specific database only
+    """
     schema = {}
-    collections = db.list_collection_names()
-    for coll in collections:
-        schema[coll] = get_collection_schema(db, coll)
+    
+    # Check if user can query all databases
+    is_admin = can_query_all_databases()
+    
+    if is_admin and mongo_client is not None:
+        # Admin users: get schema from ALL databases
+        print(f"[SCHEMA] Admin user - Getting schema from ALL databases: {ALL_DATABASES}")
+        seen_collections = set()
+        
+        for db_name in ALL_DATABASES:
+            try:
+                current_db = mongo_client[db_name]
+                collections = current_db.list_collection_names()
+                
+                for coll in collections:
+                    # Only add schema for new collections (avoid duplicates)
+                    if coll not in seen_collections:
+                        coll_schema = get_collection_schema(current_db, coll)
+                        if coll_schema:
+                            schema[coll] = coll_schema
+                            seen_collections.add(coll)
+                            print(f"[SCHEMA] Added collection '{coll}' from database '{db_name}'")
+            except Exception as e:
+                print(f"[SCHEMA] Error getting schema from {db_name}: {e}")
+                continue
+        
+        print(f"[SCHEMA] Total unique collections for admin: {len(schema)}")
+    else:
+        # Franchise users: get schema from their specific database only
+        collections = db.list_collection_names()
+        for coll in collections:
+            schema[coll] = get_collection_schema(db, coll)
+        print(f"[SCHEMA] Franchise user - Collections from single database: {len(schema)}")
+    
     return schema
 
 
 # Cache database stats to avoid slow queries on every rerun
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_database_stats(_db, _collections):
-    """Get total document count and per-collection counts (cached)"""
+def get_database_stats(_mongo_client, _db_name, _collections):
+    """Get total document count and per-collection counts (cached)
+    
+    Args:
+        _mongo_client: MongoDB client object
+        _db_name: Database name (used as cache key)
+        _collections: Tuple of collection names
+    """
     collection_counts = {}
     total = 0
+    db = _mongo_client[_db_name]
     for coll in _collections:
-        count = _db[coll].count_documents({})
-        collection_counts[coll] = count
-        total += count
+        try:
+            count = db[coll].count_documents({})
+            collection_counts[coll] = count
+            total += count
+        except Exception:
+            collection_counts[coll] = 0
     return total, collection_counts
+
+
+# Get stats across all databases (for admin users)
+@st.cache_data(ttl=300)
+def get_all_databases_stats(_mongo_client, _databases):
+    """Get stats across all databases for admin users"""
+    total_docs = 0
+    db_stats = {}
+    
+    for db_name in _databases:
+        try:
+            db = _mongo_client[db_name]
+            collections = db.list_collection_names()
+            db_total = 0
+            for coll in collections:
+                try:
+                    count = db[coll].count_documents({})
+                    db_total += count
+                except Exception:
+                    pass
+            db_stats[db_name] = {"collections": len(collections), "documents": db_total}
+            total_docs += db_total
+        except Exception:
+            db_stats[db_name] = {"collections": 0, "documents": 0}
+    
+    return total_docs, db_stats
 
 
 # Generate MongoDB query using AI
@@ -1507,11 +1826,24 @@ IMPORTANT: When user asks about a location (e.g., "customers in Boston", "leads 
 - Example: "customers in Richmond" -> {"serviceAddressState": "VA"}
 """
     
+    # Check if user is admin for multi-database context
+    is_admin = can_query_all_databases()
+    multi_db_context = ""
+    if is_admin:
+        multi_db_context = f"""
+MULTI-DATABASE ARCHITECTURE:
+You are generating queries for an ADMIN user who can query ALL {len(ALL_DATABASES)} databases.
+The databases are: {', '.join(ALL_DATABASES)}
+Each database has the same collection structure.
+The query will be automatically executed across ALL databases and results will be merged.
+Just generate the query normally - the system handles multi-database execution.
+"""
+
     system_prompt = f"""You are a MongoDB query expert. Convert natural language to MongoDB queries.
 
 COLLECTIONS AND FIELDS:
 {schema_str}
-
+{multi_db_context}
 {location_state_mapping}
 
 RULES:
@@ -1520,16 +1852,26 @@ RULES:
 3. For aggregation: "operation": "aggregate" with "pipeline"
 4. For counting: "operation": "count"
 5. No explanations, just JSON
-6. there are 4 customer collections. so in case user query is related with customer, consider all these 4 collections
-7. ALWAYS use STATE CODES (MA, OH, IL, SC, GA, MD, VA, DC) for location queries, NEVER use city names or full state names
+6. ALWAYS use STATE CODES (MA, OH, IL, SC, GA, MD, VA, DC) for location queries, NEVER use city names or full state names
+
+CRITICAL - CUSTOMER COLLECTION RULES:
+There are 4 customer collections: CustomerActive, CustomersActivation, CustomersSuspended, CustomersTerminated
+- If user asks for "active customers" -> use "CustomerActive"
+- If user asks for "activation customers" or "customers in activation" -> use "CustomersActivation"
+- If user asks for "suspended customers" -> use "CustomersSuspended"
+- If user asks for "terminated customers" -> use "CustomersTerminated"
+- If user asks for generic "customers", "all customers", "show customers", "how many customers" (WITHOUT specific type words like active/activation/suspended/terminated) -> use "customers" (this will query ALL 4 collections)
 
 EXAMPLES:
 - "How many leads?" -> {{"collection": "leads", "operation": "count", "query": {{}}}}
-- "Show active customers" -> {{"collection": "customers_active", "operation": "find", "query": {{}}}}
-- "Customers in Boston" -> {{"collection": "CustomerActive", "operation": "find", "query": {{"serviceAddressState": "MA"}}}}
+- "Show active customers" -> {{"collection": "CustomerActive", "operation": "find", "query": {{}}}}
+- "Show customers" -> {{"collection": "customers", "operation": "find", "query": {{}}}}
+- "All customers" -> {{"collection": "customers", "operation": "find", "query": {{}}}}
+- "How many customers?" -> {{"collection": "customers", "operation": "count", "query": {{}}}}
+- "Customers in Boston" -> {{"collection": "customers", "operation": "find", "query": {{"serviceAddressState": "MA"}}}}
+- "Active customers in Boston" -> {{"collection": "CustomerActive", "operation": "find", "query": {{"serviceAddressState": "MA"}}}}
 - "Leads in Massachusetts" -> {{"collection": "leads", "operation": "find", "query": {{"serviceAddressState": "MA"}}}}
 - "Proposals in Cleveland" -> {{"collection": "proposals", "operation": "find", "query": {{"serviceAddressState": "OH"}}}}
-- "Customers in Richmond" -> {{"collection": "CustomerActive", "operation": "find", "query": {{"serviceAddressState": "VA"}}}}
 """
 
     user_prompt = f"Convert to MongoDB query: {user_question}"
@@ -1750,81 +2092,141 @@ def get_customer_collections_for_query(collection_name):
         - None if not a customer-related query
     
     Examples:
-        - "customer_active" or "active_customer" → ["CustomerActive"]
-        - "customers_activation" → ["CustomersActivation"]
-        - "suspended_customers" → ["CustomersSuspended"]
-        - "terminated_customer" → ["CustomersTerminated"]
-        - "customer" or "customers" (generic) → all 4 collections
+        - "CustomerActive" or "customer_active" → ["CustomerActive"]
+        - "CustomersActivation" or "customers_activation" → ["CustomersActivation"]
+        - "CustomersSuspended" or "suspended_customers" → ["CustomersSuspended"]
+        - "CustomersTerminated" or "terminated_customer" → ["CustomersTerminated"]
+        - "customer" or "customers" (generic, no type keyword) → all 4 collections
         - "leads" → None (not a customer query)
     """
-    name_lower = collection_name.lower()
+    name_lower = collection_name.lower().replace("_", "").replace("-", "")
     
     # Check if this is a customer-related query
     if "customer" not in name_lower:
         return None  # Not a customer query
     
-    # Check for specific customer type keywords
+    # If it's exactly "customer" or "customers" (generic), return all collections
+    if name_lower in ["customer", "customers"]:
+        print(f"[CUSTOMER QUERY] Generic customer query detected - will query ALL 4 collections")
+        return CUSTOMER_COLLECTIONS
+    
+    # Check for specific customer type keywords in the collection name
     # Important: Check "activation" before "active" since "activation" contains "active"
     for keyword in ["activation", "suspended", "terminated", "active"]:
         if keyword in name_lower:
-            return [CUSTOMER_TYPE_KEYWORDS[keyword]]
+            specific_collection = CUSTOMER_TYPE_KEYWORDS[keyword]
+            print(f"[CUSTOMER QUERY] Specific type '{keyword}' detected - will query only [{specific_collection}]")
+            return [specific_collection]
     
-    # Generic "customer" query without specific type - return all collections
+    # If contains "customer" but no specific type, return all collections
+    print(f"[CUSTOMER QUERY] No specific type found in '{collection_name}' - will query ALL 4 collections")
     return CUSTOMER_COLLECTIONS
 
 
-# Execute MongoDB query
-def execute_query(db, query_obj):
+# Execute MongoDB query (supports multi-database for admin users)
+def execute_query(db, query_obj, mongo_client=None):
+    """
+    Execute MongoDB query with multi-database support.
+    
+    For Franchise Partner/Client Admin: queries only their specific database
+    For Super System4 Admin/System4 Admin: queries ALL databases and combines results
+    
+    Args:
+        db: The database object for the user's specific database
+        query_obj: The query object generated by AI
+        mongo_client: MongoDB client (required for admin multi-database queries)
+    """
     try:
         raw_collection_name = query_obj["collection"]
-        available_collections = db.list_collection_names()
-        collection_name = normalize_collection_name(raw_collection_name, available_collections)
-        print("collection_name: ", collection_name)
         operation = query_obj.get("operation", "find")
+        
+        # Check if user can query all databases
+        is_admin = can_query_all_databases()
+        
+        # Get current user's database name for logging
+        user_db_name = "Unknown"
+        if 'user' in st.session_state and st.session_state.user:
+            user_db_name = st.session_state.user.get("database", "FMS")
+        
+        # Determine databases to query
+        if is_admin and mongo_client is not None:
+            # Admin users: query all databases
+            databases_to_query = ALL_DATABASES
+            print(f"[ADMIN] Querying ALL databases: {databases_to_query}")
+        else:
+            # Non-admin users: query ONLY their specific database
+            databases_to_query = None  # Will use the passed db object (user's specific database)
+            print(f"[FRANCHISE USER] Querying ONLY database: {user_db_name}")
         
         # Determine which customer collections to query (if any)
         customer_collections = get_customer_collections_for_query(raw_collection_name)
         is_customer_query = customer_collections is not None
         
+        print(f"is_admin: {is_admin}, user_database: {user_db_name}")
         print("is_customer_query: ", is_customer_query)
         print("customer_collections: ", customer_collections)
         
         # Get franchise filter for role-based data access
         franchise_states = get_user_franchise_filter()
-        print("franchise_states filter: ", franchise_states)
         
         if operation == "find":
             query = query_obj.get("query", {})
-            # Make query case-insensitive
             query = make_case_insensitive(query)
-            print("query: ", query)
             projection = query_obj.get("projection", None)
-            print("projection: ", projection)
             all_results = []
             
-            if is_customer_query:
-                # Search across the determined customer collection(s)
-                for coll_name in customer_collections:
-                    if coll_name in db.list_collection_names():
-                        # Apply franchise filter for this collection
-                        filtered_query = apply_franchise_filter_to_query(query, franchise_states, coll_name)
-                        print(f"filtered_query for {coll_name}: ", filtered_query)
+            if databases_to_query:
+                # Query across all databases (admin users)
+                for db_name in databases_to_query:
+                    try:
+                        current_db = mongo_client[db_name]
+                        available_collections = current_db.list_collection_names()
+                        collection_name = normalize_collection_name(raw_collection_name, available_collections)
                         
-                        collection = db[coll_name]
-                        cursor = collection.find(filtered_query, projection).limit(50)
-                        for doc in cursor:
-                            doc['_source_collection'] = coll_name
-                            all_results.append(doc)
+                        if is_customer_query:
+                            for coll_name in customer_collections:
+                                if coll_name in available_collections:
+                                    collection = current_db[coll_name]
+                                    cursor = collection.find(query, projection)
+                                    for doc in cursor:
+                                        doc['_source_collection'] = coll_name
+                                        doc['_source_database'] = db_name
+                                        all_results.append(doc)
+                        else:
+                            if collection_name in available_collections:
+                                collection = current_db[collection_name]
+                                cursor = collection.find(query, projection)
+                                for doc in cursor:
+                                    doc['_source_database'] = db_name
+                                    all_results.append(doc)
+                    except Exception as e:
+                        print(f"Error querying database {db_name}: {e}")
+                        continue
             else:
-                # Apply franchise filter for single collection
-                filtered_query = apply_franchise_filter_to_query(query, franchise_states, collection_name)
-                print("filtered_query: ", filtered_query)
+                # Single database query (franchise users) - query ONLY their specific database
+                print(f"[QUERY] Executing FIND on single database: {user_db_name}")
+                available_collections = db.list_collection_names()
+                collection_name = normalize_collection_name(raw_collection_name, available_collections)
+                print(f"[QUERY] Available collections: {available_collections}")
+                print(f"[QUERY] Target collection: {collection_name}")
                 
-                # Search single collection
-                collection = db[collection_name]
-                cursor = collection.find(filtered_query, projection).limit(100)
-                all_results = list(cursor)
-                print("all_results count: ", len(all_results))
+                if is_customer_query:
+                    for coll_name in customer_collections:
+                        if coll_name in available_collections:
+                            filtered_query = apply_franchise_filter_to_query(query, franchise_states, coll_name)
+                            collection = db[coll_name]
+                            print(f"[QUERY] Querying customer collection: {coll_name}")
+                            cursor = collection.find(filtered_query, projection)
+                            for doc in cursor:
+                                doc['_source_collection'] = coll_name
+                                all_results.append(doc)
+                else:
+                    filtered_query = apply_franchise_filter_to_query(query, franchise_states, collection_name)
+                    collection = db[collection_name]
+                    print(f"[QUERY] Executing query on {collection_name}: {filtered_query}")
+                    cursor = collection.find(filtered_query, projection)
+                    all_results = list(cursor)
+                    print(f"[QUERY] Results count: {len(all_results)}")
             
             # Convert ObjectId to string for display
             for doc in all_results:
@@ -1835,36 +2237,65 @@ def execute_query(db, query_obj):
         
         elif operation == "aggregate":
             pipeline = query_obj.get("pipeline", [])
-            
             all_results = []
-            if is_customer_query:
-                # Aggregate across the determined customer collection(s)
-                for coll_name in customer_collections:
-                    if coll_name in db.list_collection_names():
-                        # Inject franchise filter as first $match stage
-                        state_field = get_state_field_for_collection(coll_name)
-                        franchise_filter = build_franchise_filter(franchise_states, state_field)
-                        if franchise_filter:
-                            coll_pipeline = [{"$match": franchise_filter}] + pipeline
-                        else:
-                            coll_pipeline = pipeline
+            
+            if databases_to_query:
+                # Aggregate across all databases (admin users)
+                for db_name in databases_to_query:
+                    try:
+                        current_db = mongo_client[db_name]
+                        available_collections = current_db.list_collection_names()
+                        collection_name = normalize_collection_name(raw_collection_name, available_collections)
                         
-                        collection = db[coll_name]
-                        cursor = collection.aggregate(coll_pipeline)
-                        for doc in cursor:
-                            doc['_source_collection'] = coll_name
-                            all_results.append(doc)
+                        if is_customer_query:
+                            for coll_name in customer_collections:
+                                if coll_name in available_collections:
+                                    collection = current_db[coll_name]
+                                    cursor = collection.aggregate(pipeline)
+                                    for doc in cursor:
+                                        doc['_source_collection'] = coll_name
+                                        doc['_source_database'] = db_name
+                                        all_results.append(doc)
+                        else:
+                            if collection_name in available_collections:
+                                collection = current_db[collection_name]
+                                cursor = collection.aggregate(pipeline)
+                                for doc in cursor:
+                                    doc['_source_database'] = db_name
+                                    all_results.append(doc)
+                    except Exception as e:
+                        print(f"Error aggregating in database {db_name}: {e}")
+                        continue
             else:
-                # Inject franchise filter as first $match stage for single collection
-                state_field = get_state_field_for_collection(collection_name)
-                franchise_filter = build_franchise_filter(franchise_states, state_field)
-                if franchise_filter:
-                    pipeline = [{"$match": franchise_filter}] + pipeline
-                    print("Injected franchise filter into aggregate pipeline")
+                # Single database aggregate (franchise users) - query ONLY their specific database
+                print(f"[QUERY] Executing AGGREGATE on single database: {user_db_name}")
+                available_collections = db.list_collection_names()
+                collection_name = normalize_collection_name(raw_collection_name, available_collections)
                 
-                collection = db[collection_name]
-                cursor = collection.aggregate(pipeline)
-                all_results = list(cursor)
+                if is_customer_query:
+                    for coll_name in customer_collections:
+                        if coll_name in available_collections:
+                            state_field = get_state_field_for_collection(coll_name)
+                            franchise_filter = build_franchise_filter(franchise_states, state_field)
+                            coll_pipeline = [{"$match": franchise_filter}] + pipeline if franchise_filter else pipeline
+                            
+                            collection = db[coll_name]
+                            print(f"[QUERY] Aggregating customer collection: {coll_name}")
+                            cursor = collection.aggregate(coll_pipeline)
+                            for doc in cursor:
+                                doc['_source_collection'] = coll_name
+                                all_results.append(doc)
+                else:
+                    state_field = get_state_field_for_collection(collection_name)
+                    franchise_filter = build_franchise_filter(franchise_states, state_field)
+                    if franchise_filter:
+                        pipeline = [{"$match": franchise_filter}] + pipeline
+                    
+                    collection = db[collection_name]
+                    print(f"[QUERY] Executing aggregate on {collection_name}")
+                    cursor = collection.aggregate(pipeline)
+                    all_results = list(cursor)
+                    print(f"[QUERY] Aggregate results count: {len(all_results)}")
             
             for doc in all_results:
                 if '_id' in doc and not isinstance(doc['_id'], (str, int, float)):
@@ -1874,20 +2305,47 @@ def execute_query(db, query_obj):
         elif operation == "count":
             query = query_obj.get("query", {})
             query = make_case_insensitive(query)
-            
             total_count = 0
-            if is_customer_query:
-                for coll_name in customer_collections:
-                    if coll_name in db.list_collection_names():
-                        # Apply franchise filter for this collection
-                        filtered_query = apply_franchise_filter_to_query(query, franchise_states, coll_name)
-                        collection = db[coll_name]
-                        total_count += collection.count_documents(filtered_query)
+            
+            if databases_to_query:
+                # Count across all databases (admin users)
+                for db_name in databases_to_query:
+                    try:
+                        current_db = mongo_client[db_name]
+                        available_collections = current_db.list_collection_names()
+                        collection_name = normalize_collection_name(raw_collection_name, available_collections)
+                        
+                        if is_customer_query:
+                            for coll_name in customer_collections:
+                                if coll_name in available_collections:
+                                    collection = current_db[coll_name]
+                                    total_count += collection.count_documents(query)
+                        else:
+                            if collection_name in available_collections:
+                                collection = current_db[collection_name]
+                                total_count += collection.count_documents(query)
+                    except Exception as e:
+                        print(f"Error counting in database {db_name}: {e}")
+                        continue
             else:
-                # Apply franchise filter for single collection
-                filtered_query = apply_franchise_filter_to_query(query, franchise_states, collection_name)
-                collection = db[collection_name]
-                total_count = collection.count_documents(filtered_query)
+                # Single database count (franchise users) - count ONLY in their specific database
+                print(f"[QUERY] Executing COUNT on single database: {user_db_name}")
+                available_collections = db.list_collection_names()
+                collection_name = normalize_collection_name(raw_collection_name, available_collections)
+                
+                if is_customer_query:
+                    for coll_name in customer_collections:
+                        if coll_name in available_collections:
+                            filtered_query = apply_franchise_filter_to_query(query, franchise_states, coll_name)
+                            collection = db[coll_name]
+                            count = collection.count_documents(filtered_query)
+                            total_count += count
+                            print(f"[QUERY] Count in {coll_name}: {count}")
+                else:
+                    filtered_query = apply_franchise_filter_to_query(query, franchise_states, collection_name)
+                    collection = db[collection_name]
+                    total_count = collection.count_documents(filtered_query)
+                    print(f"[QUERY] Count in {collection_name}: {total_count}")
             
             return {"success": True, "data": [{"count": total_count}], "count": 1}
         
@@ -2010,21 +2468,40 @@ def main():
         st.error("⚠️ Cannot connect to MongoDB. Please ensure MongoDB is running.")
         return
     
-    db = mongo_client[config.MONGODB_DATABASE]
-    collections = db.list_collection_names()
+    # Determine database based on user role and franchise
+    user_database = get_user_database()
+    is_admin = can_query_all_databases()
     
-    # Hero Header with user info
+    if is_admin:
+        # Admin users: default to first available database for stats, but query all
+        primary_db_name = ALL_DATABASES[0] if ALL_DATABASES else config.MONGODB_DATABASE
+        db = mongo_client[primary_db_name]
+        current_db_name = "All Databases"
+        print(f"[MAIN] Admin user - Primary DB for stats: {primary_db_name}, Can query all: {ALL_DATABASES}")
+    else:
+        # Franchise users: use their specific database ONLY
+        current_db_name = user.get("database", config.MONGODB_DATABASE)
+        db = mongo_client[current_db_name]
+        print(f"[MAIN] Franchise user - Database: {current_db_name} (Franchise: {user.get('franchise', 'Unknown')})")
+    
+    collections = db.list_collection_names()
+    print(f"[MAIN] Collections in current database: {collections}")
+    
+    # Hero Header with user info and database
+    db_display = current_db_name
     st.markdown(f"""
     <div class="hero-container">
         <h1 class="hero-title">⚡ FMS Query Engine</h1>
         <p class="hero-subtitle">Transform natural language into powerful database insights with AI</p>
-        <div class="hero-badge">System Online • MongoDB Connected • {user['role']}</div>
+        <div class="hero-badge">System Online • Database: {db_display} • {user['role']}</div>
     </div>
     """, unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
-        # User Profile Section
+        # User Profile Section with Database Info
+        db_badge_color = "#22c55e" if is_admin else "#6366f1"
+        db_badge_text = current_db_name
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%); 
                     border: 1px solid rgba(99, 102, 241, 0.3); 
@@ -2037,11 +2514,19 @@ def main():
             <div style="font-size: 0.8rem; color: #a78bfa; margin-top: 0.25rem;">{user['role']}</div>
             <div style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem;">{user['email']}</div>
             {f'<div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem;">🏢 {user["franchise"]}</div>' if user.get('franchise') else ''}
+            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: inline-block; background: rgba(99, 102, 241, 0.15); border: 1px solid {db_badge_color}; padding: 4px 12px; border-radius: 20px;">
+                    <span style="font-size: 0.7rem; color: {db_badge_color};">🗄️ Database: {db_badge_text}</span>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
         # Logout button
         if st.button("🚪 Logout", use_container_width=True):
+            # Clear cached database stats on logout
+            get_database_stats.clear()
+            get_all_databases_stats.clear()
             st.session_state.logged_in = False
             st.session_state.user = None
             st.rerun()
@@ -2076,33 +2561,67 @@ def main():
         
         st.markdown('<div class="sidebar-header">📊 Database</div>', unsafe_allow_html=True)
         
-        # Database Stats (cached to avoid slow reloads)
-        total_docs, collection_counts = get_database_stats(db, tuple(collections))
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"""
-            <div class="stat-card">
-                <div class="stat-value">{total_docs:,}</div>
-                <div class="stat-label">Documents</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"""
-            <div class="stat-card">
-                <div class="stat-value">{len(collections)}</div>
-                <div class="stat-label">Collections</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with st.expander("📁 View Collections", expanded=False):
-            for coll in sorted(collections):
-                count = collection_counts.get(coll, 0)
+        # Database Stats based on user role
+        if is_admin:
+            # Admin users: show stats across all databases
+            total_docs, db_stats = get_all_databases_stats(mongo_client, tuple(ALL_DATABASES))
+            total_collections = sum(stats["collections"] for stats in db_stats.values())
+            
+            col1, col2 = st.columns(2)
+            with col1:
                 st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #334155;">
-                    <span style="color: #f1f5f9; font-size: 0.85rem;">{coll}</span>
-                    <span style="color: #6366f1; font-weight: 600; font-size: 0.85rem;">{count:,}</span>
+                <div class="stat-card">
+                    <div class="stat-value">{total_docs:,}</div>
+                    <div class="stat-label">Total Documents</div>
                 </div>
                 """, unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{len(ALL_DATABASES)}</div>
+                    <div class="stat-label">Databases</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with st.expander("📁 View All Databases", expanded=False):
+                for db_name, stats in db_stats.items():
+                    st.markdown(f"""
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #f1f5f9; font-size: 0.85rem; font-weight: 600;">🗄️ {db_name}</span>
+                            <span style="color: #22c55e; font-weight: 600; font-size: 0.85rem;">{stats['documents']:,} docs</span>
+                        </div>
+                        <span style="color: #64748b; font-size: 0.7rem;">{stats['collections']} collections</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            # Franchise users: show stats for their specific database
+            total_docs, collection_counts = get_database_stats(mongo_client, current_db_name, tuple(collections))
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{total_docs:,}</div>
+                    <div class="stat-label">Documents</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{len(collections)}</div>
+                    <div class="stat-label">Collections</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with st.expander("📁 View Collections", expanded=False):
+                for coll in sorted(collections):
+                    count = collection_counts.get(coll, 0)
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #334155;">
+                        <span style="color: #f1f5f9; font-size: 0.85rem;">{coll}</span>
+                        <span style="color: #6366f1; font-weight: 600; font-size: 0.85rem;">{count:,}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
         
         st.markdown('<div class="sidebar-header">💡 Quick Queries</div>', unsafe_allow_html=True)
         
@@ -2158,7 +2677,7 @@ def main():
         
         with progress_container:
             with st.spinner("🤖 AI is analyzing your question..."):
-                schema = get_database_schema(db)
+                schema = get_database_schema(db, mongo_client)
                 query_obj = generate_mongo_query(user_question, schema, ai_provider)
                 
                 # Post-process to ensure location names are converted to state codes
@@ -2172,7 +2691,7 @@ def main():
         else:
             # Execute query first to get results
             with st.spinner("⚡ Executing query on database..."):
-                results = execute_query(db, query_obj)
+                results = execute_query(db, query_obj, mongo_client)
             
             # Generate AI insights
             summary = ""
@@ -2184,12 +2703,18 @@ def main():
             st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
             
             if results["success"]:
+                # Show different message for admin users querying all databases
+                if is_admin:
+                    db_info = f"across <span style='color: #a5b4fc; font-weight: 500;'>{len(ALL_DATABASES)} databases</span>"
+                else:
+                    db_info = f"in database <span style='color: #a5b4fc; font-weight: 500;'>{current_db_name}</span>"
+                
                 st.markdown(f"""
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px;">
                     <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #22c55e, #10b981); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">✓</div>
                     <div>
                         <div style="font-size: 1.25rem; font-weight: 600; color: #f1f5f9;">Query Executed Successfully</div>
-                        <div style="font-size: 0.9rem; color: #94a3b8;">Found <span style="color: #22c55e; font-weight: 600;">{results['count']}</span> records in <span style="color: #6366f1; font-weight: 500;">{query_obj.get('collection', 'N/A')}</span></div>
+                        <div style="font-size: 0.9rem; color: #94a3b8;">Found <span style="color: #22c55e; font-weight: 600;">{results['count']}</span> records in <span style="color: #6366f1; font-weight: 500;">{query_obj.get('collection', 'N/A')}</span> {db_info}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -2265,7 +2790,11 @@ def main():
                     if results["data"]:
                         df = pd.DataFrame(results["data"])
                         # Remove internal/metadata columns from display
-                        columns_to_hide = ['_id', '_importedAt', '_source', '_source_collection', 'businessLocationId', 'businessLocationDateCreated', 'customerKey']
+                        # For admin users, keep _source_database to show which database each record came from
+                        if is_admin:
+                            columns_to_hide = ['_id', '_importedAt', '_source', '_source_collection', 'businessLocationId', 'businessLocationDateCreated', 'customerKey']
+                        else:
+                            columns_to_hide = ['_id', '_importedAt', '_source', '_source_collection', '_source_database', 'businessLocationId', 'businessLocationDateCreated', 'customerKey']
                         df_display = df.drop(columns=[col for col in columns_to_hide if col in df.columns])
                         
                         # Results info bar

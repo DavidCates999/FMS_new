@@ -11,20 +11,20 @@ def fetch_proposals():
         "Content-Type": "application/json",
         "Origin": "https://fsm.s4servicesync.com",
         "Referer": "https://fsm.s4servicesync.com/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
         "x-tenant": "Boston Train-TAX"
     }
     
     cookies = {
-        "AUTH-TOKEN": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzZXJ2aWNlc3luYyIsInN1YiI6ImZvcnVzZTE5ODFAZ21haWwuY29tIiwiaWF0IjoxNzY0OTUwNDYwLCJleHAiOjE3NjQ5NTQwNjB9.aTDPoWhU_A1BVY6HZMH4WgpCQUNz2fzxn5IgggtdF3Ga-nVZZssRgW1WWm_QosuUihFtMIaku-yGJh7kEGs7wA"
+        "AUTH-TOKEN": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzZXJ2aWNlc3luYyIsInN1YiI6ImZvcnVzZTE5ODFAZ21haWwuY29tIiwiaWF0IjoxNzY5NTQ1NTgwLCJleHAiOjE3Njk1NDkxODB9.v0aRF750YP9Z2zTM6PXqMC8Z9qyu01kLgy3Vzxn_uApbfaPFQ9Mhg8vcjwwdr6YvpIiQS0aw2TDyPZ5AD1rZEg"
     }
     
     payload = {
         "skip": 0,
-        "take": 70,
+        "take": 100,
         "sort": [{"field": "proposedDate", "dir": "desc"}],
         "filter": {"filters": [], "logic": "and"}
     }
