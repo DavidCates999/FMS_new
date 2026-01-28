@@ -77,6 +77,23 @@ LOCATION_DATABASE_MAPPING = {
 # List of all available databases (for admin queries across all databases)
 ALL_DATABASES = ["FMS", "Austin", "Boston", "Broward", "CentralAL", "CentralFlorida", "Charleston", "Charlotte"]
 
+# Database display names (for UI - maps internal DB name to user-friendly name)
+# FMS is the project name, so display "Boston Train-TAX" for clarity
+DATABASE_DISPLAY_NAMES = {
+    "FMS": "Boston Train-TAX",
+    "Austin": "Austin",
+    "Boston": "Boston",
+    "Broward": "Broward",
+    "CentralAL": "Central AL",
+    "CentralFlorida": "Central Florida",
+    "Charleston": "Charleston",
+    "Charlotte": "Charlotte",
+}
+
+def get_database_display_name(db_name):
+    """Get the user-friendly display name for a database."""
+    return DATABASE_DISPLAY_NAMES.get(db_name, db_name)
+
 # =============================================================================
 # FRANCHISE TO STATE MAPPING (Legacy - for state-based filtering within database)
 # =============================================================================
@@ -2190,14 +2207,14 @@ def execute_query(db, query_obj, mongo_client=None):
                                     cursor = collection.find(query, projection)
                                     for doc in cursor:
                                         doc['_source_collection'] = coll_name
-                                        doc['_source_database'] = db_name
+                                        doc['_source_database'] = get_database_display_name(db_name)
                                         all_results.append(doc)
                         else:
                             if collection_name in available_collections:
                                 collection = current_db[collection_name]
                                 cursor = collection.find(query, projection)
                                 for doc in cursor:
-                                    doc['_source_database'] = db_name
+                                    doc['_source_database'] = get_database_display_name(db_name)
                                     all_results.append(doc)
                     except Exception as e:
                         print(f"Error querying database {db_name}: {e}")
@@ -2254,14 +2271,14 @@ def execute_query(db, query_obj, mongo_client=None):
                                     cursor = collection.aggregate(pipeline)
                                     for doc in cursor:
                                         doc['_source_collection'] = coll_name
-                                        doc['_source_database'] = db_name
+                                        doc['_source_database'] = get_database_display_name(db_name)
                                         all_results.append(doc)
                         else:
                             if collection_name in available_collections:
                                 collection = current_db[collection_name]
                                 cursor = collection.aggregate(pipeline)
                                 for doc in cursor:
-                                    doc['_source_database'] = db_name
+                                    doc['_source_database'] = get_database_display_name(db_name)
                                     all_results.append(doc)
                     except Exception as e:
                         print(f"Error aggregating in database {db_name}: {e}")
@@ -2476,19 +2493,21 @@ def main():
         # Admin users: default to first available database for stats, but query all
         primary_db_name = ALL_DATABASES[0] if ALL_DATABASES else config.MONGODB_DATABASE
         db = mongo_client[primary_db_name]
-        current_db_name = "All Databases"
+        current_db_name = "All Databases"  # Internal name
+        current_db_display = "All Databases"  # Display name for UI
         print(f"[MAIN] Admin user - Primary DB for stats: {primary_db_name}, Can query all: {ALL_DATABASES}")
     else:
         # Franchise users: use their specific database ONLY
         current_db_name = user.get("database", config.MONGODB_DATABASE)
+        current_db_display = get_database_display_name(current_db_name)  # Display name for UI
         db = mongo_client[current_db_name]
-        print(f"[MAIN] Franchise user - Database: {current_db_name} (Franchise: {user.get('franchise', 'Unknown')})")
+        print(f"[MAIN] Franchise user - Database: {current_db_name} (Display: {current_db_display}, Franchise: {user.get('franchise', 'Unknown')})")
     
     collections = db.list_collection_names()
     print(f"[MAIN] Collections in current database: {collections}")
     
     # Hero Header with user info and database
-    db_display = current_db_name
+    db_display = current_db_display
     st.markdown(f"""
     <div class="hero-container">
         <h1 class="hero-title">⚡ FMS Query Engine</h1>
@@ -2501,7 +2520,7 @@ def main():
     with st.sidebar:
         # User Profile Section with Database Info
         db_badge_color = "#22c55e" if is_admin else "#6366f1"
-        db_badge_text = current_db_name
+        db_badge_text = current_db_display
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%); 
                     border: 1px solid rgba(99, 102, 241, 0.3); 
@@ -2585,10 +2604,12 @@ def main():
             
             with st.expander("📁 View All Databases", expanded=False):
                 for db_name, stats in db_stats.items():
+                    # Convert internal DB name to display name (FMS -> Boston Train-TAX)
+                    display_name = DATABASE_DISPLAY_NAMES.get(db_name, db_name)
                     st.markdown(f"""
                     <div style="padding: 0.5rem 0; border-bottom: 1px solid #334155;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #f1f5f9; font-size: 0.85rem; font-weight: 600;">🗄️ {db_name}</span>
+                            <span style="color: #f1f5f9; font-size: 0.85rem; font-weight: 600;">🗄️ {display_name}</span>
                             <span style="color: #22c55e; font-weight: 600; font-size: 0.85rem;">{stats['documents']:,} docs</span>
                         </div>
                         <span style="color: #64748b; font-size: 0.7rem;">{stats['collections']} collections</span>
@@ -2707,7 +2728,7 @@ def main():
                 if is_admin:
                     db_info = f"across <span style='color: #a5b4fc; font-weight: 500;'>{len(ALL_DATABASES)} databases</span>"
                 else:
-                    db_info = f"in database <span style='color: #a5b4fc; font-weight: 500;'>{current_db_name}</span>"
+                    db_info = f"in database <span style='color: #a5b4fc; font-weight: 500;'>{current_db_display}</span>"
                 
                 st.markdown(f"""
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px;">
